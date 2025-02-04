@@ -48,3 +48,14 @@ class TxPreparationPayload(BaseTxPayload):
 
     tx_submitter: Optional[str] = None
     tx_hash: Optional[str] = None
+class MultisendPayload(BaseTxPayload):
+    def __init__(self, sender: str, txs: List[Dict], tx_hash: str):
+        super().__init__(sender, tx_hash)
+        self.txs = txs  # List of encoded transactions
+
+    def validate(self) -> bool:
+        return (
+            super().validate() and 
+            len(self.txs) > 0 and
+            all("to" in tx and "data" in tx for tx in self.txs)
+        )
