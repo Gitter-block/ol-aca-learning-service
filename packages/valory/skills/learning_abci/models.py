@@ -57,10 +57,16 @@ class Params(BaseParams):
         self.olas_token_address = self._ensure("olas_token_address", kwargs, str)
 
         # multisend address is used in other skills, so we cannot pop it using _ensure
-        self.multisend_address = kwargs.get("multisend_address", "")
+        self.multisend_address = self._ensure("multisend_address", kwargs, str)  # Enforce required field
+    # Add gas limit parameter for multisend
+        self.multisend_gas_limit = kwargs.get("multisend_gas_limit", 500_000)  # Default value
+    
 
         super().__init__(*args, **kwargs)
 
 
 class CoingeckoSpecs(ApiSpecs):
     """A model that wraps ApiSpecs for Coingecko API."""
+@staticmethod
+def multisend_txs_key() -> str:
+    return "participant_to_multisend_txs"  # Storage key for multisend payloads
