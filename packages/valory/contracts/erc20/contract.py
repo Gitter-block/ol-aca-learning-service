@@ -113,3 +113,25 @@ class ERC20(Contract):
         checksumed_recipient = ledger_api.api.to_checksum_address(recipient)
         data = contract_instance.encodeABI("transfer", args=(checksumed_recipient, amount))
         return {"data": bytes.fromhex(data[2:])}
+    
+    //new
+    def read_value(ledger_api: LedgerApi, contract_address: str) -> Optional[int]:
+    try:
+        response = ledger_api.get_state(
+            ledger_callable="call",
+            function_name="readValue",
+            contract_address=contract_address,
+            contract_id="simple_contract",
+            args={},
+        )
+        
+        if response.performative == LedgerApiMessage.Performative.STATE:
+            value = response.state.body["readValue"]
+            return value
+        else:
+            logging.error(f"Error retrieving the value from the smart contract: {response}")
+            return None
+
+    except Exception as e:
+        logging.error(f"An unexpected error occurred: {e}")
+        return None
