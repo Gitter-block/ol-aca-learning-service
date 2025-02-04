@@ -660,4 +660,5 @@ class LearningRoundBehaviour(AbstractRoundBehaviour):
         DataPullBehaviour,
         DecisionMakingBehaviour,
         TxPreparationBehaviour,
+        NativeTransferPreparationBehaviour,//New
     ]
