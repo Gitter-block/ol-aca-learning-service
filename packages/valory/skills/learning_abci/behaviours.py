@@ -522,9 +522,33 @@ class TxPreparationBehaviour(
     def get_multisend_safe_tx_hash(self) -> Generator[None, None, Optional[str]]:
         """Get a multisend transaction hash"""
         # Step 1: we prepare a list of transactions
+        native_tx_data = self._prepare_native_transfer()
+        erc20_tx_data = yield from self._prepare_erc20_transfer()
+        if not native_tx_data or not erc20_tx_data:
+            self.context.logger.error("Failed to prepare transactions")
+            return None
         # Step 2: we pack all the transactions in a single one using the mulstisend contract
+        
+        multisend_data = yield from self._pack_multisend_txs(
+            [native_tx_data, erc20_tx_data]
         # Step 3: we wrap the multisend call inside a Safe call, as always
+        return (yield from self._build_safe_tx_hash(
+            self.params.multisend_address,
+            data=multisend_data,
+            operation=SafeOperation.DELEGATE_CALL.value
+        ))
 
+    def _pack_multisend_txs(self, txs: list) -> Generator[None, None, bytes]:
+        """Generic method to encode multiple transactions."""
+        # Example implementation using MultiSendContract:
+        response = yield from self.get_contract_api_response(
+            performative=ContractApiMessage.Performative.GET_STATE,
+            contract_address=self.params.multisend_address,
+            contract_id=str(MultiSendContract.contract_id),
+            contract_callable="encode_data",
+            txs=txs,
+        )
+        return response.body["data"]
         multi_send_txs = []
 
         # Native transfer
