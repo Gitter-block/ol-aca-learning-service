@@ -102,6 +102,11 @@ class SynchronizedData(BaseSynchronizedData):
     def tx_submitter(self) -> str:
         """Get the round that submitted a tx to transaction_settlement_abci."""
         return str(self.db.get_strict("tx_submitter"))
+        @property
+        
+    def multisend_txs(self) -> DeserializedCollection:
+        """Aggregated multisend transactions across agents."""
+        return self._get_deserialized(self.multisend_txs_key())
 
 
 class DataPullRound(CollectSameUntilThresholdRound):
@@ -167,6 +172,13 @@ class TxPreparationRound(CollectSameUntilThresholdRound):
     )
 
     # Event.ROUND_TIMEOUT  # this needs to be referenced for static checkers
+    def end_block(self) -> Optional[Tuple[BaseSynchronizedData, Event]]:
+        if self.threshold_reached:
+            tx_type = self.synchronized_data.tx_type  # New property to track
+            if tx_type == "multisend":
+                # Validate all participants submitted multisend payloads
+                validate_multisend(self.multisend_txs)
+            return super().end_block()
 
 
 class FinishedDecisionMakingRound(DegenerateRound):
@@ -218,3 +230,8 @@ class LearningAbciApp(AbciApp[Event]):
         FinishedDecisionMakingRound: set(),
         FinishedTxPreparationRound: {get_name(SynchronizedData.most_voted_tx_hash)},
     }
+    TRANSITION_MAP = {
+    DecisionMakingRound: {
+        Event.TRANSACT: TxPreparationRound,  # Modified to handle multisend
+    }
+}
