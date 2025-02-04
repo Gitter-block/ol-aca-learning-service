@@ -135,3 +135,23 @@ class ERC20(Contract):
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}")
         return None
+
+def write_value(ledger_api: LedgerApi, contract_address: str, new_value: int) -> Optional[str]:
+    try:
+        transaction = ledger_api.build_transaction(
+            ledger_callable="get_raw_transaction",
+            function_name="writeValue",
+            contract_id="simple_contract",
+            contract_address=contract_address,
+            new_value=new_value,
+        )
+        
+        if transaction.performative == LedgerApiMessage.Performative.RAW_TRANSACTION:
+            return transaction.raw_transaction.body["tx_hash"]
+        else:
+            logging.error(f"Error building transaction for writeValue: {transaction}")
+            return None
+
+    except Exception as e:
+        logging.error(f"An unexpected error occurred: {e}")
+        return None
