@@ -650,6 +650,51 @@ class TxPreparationBehaviour(
 
         return safe_tx_hash
 
+//New behaviour of NativeTransferPreparationBehaviour preparing
+
+class NativeTransferPreparationBehaviour(
+    LearningBaseBehaviour
+):  # pylint: disable=too-many-ancestors
+    """NativeTransferPreparationBehaviour"""
+
+    matching_round: Type[AbstractRound] = TxPreparationRound
+
+    def async_act(self) -> Generator:
+        """Do the act, supporting asynchronous execution."""
+
+        with self.context.benchmark_tool.measure(self.behaviour_id).local():
+            sender = self.context.agent_address
+            tx_hash = yield from self.get_native_transfer_safe_tx_hash()
+
+            payload = TxPreparationPayload(
+                sender=sender, tx_submitter=self.auto_behaviour_id(), tx_hash=tx_hash
+            )
+
+        with self.context.benchmark_tool.measure(self.behaviour_id).consensus():
+            yield from self.send_a2a_transaction(payload)
+            yield from self.wait_until_round_end()
+
+        self.set_done()
+
+    def get_native_transfer_safe_tx_hash(self) -> Generator[None, None, Optional[str]]:
+        """Prepare a native safe transaction"""
+        # Transaction data
+        data = self.get_native_transfer_data()
+
+        # Prepare safe transaction
+        safe_tx_hash = yield from self._build_safe_tx_hash(**data)
+        self.context.logger.info(f"Native transfer hash is {safe_tx_hash}")
+
+        return safe_tx_hash
+
+    def get_native_transfer_data(self) -> Dict:
+        """Get the native transaction data"""
+        data = {
+            VALUE_KEY: 1,  # Send 1 wei to the recipient
+            TO_ADDRESS_KEY: self.params.transfer_target_address,
+        }
+        self.context.logger.info(f"Native transfer data is {data}")
+        return data
 
 class LearningRoundBehaviour(AbstractRoundBehaviour):
     """LearningRoundBehaviour"""
